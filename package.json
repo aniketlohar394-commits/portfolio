@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "prisma db push && next build",
     "start": "next start",
     "lint": "eslint",
     "cap:sync": "cap sync android",
@@ -12,6 +12,8 @@
   },
   "dependencies": {
     "@capacitor/core": "^8.5.0",
+    "@libsql/client": "^0.17.4",
+    "@prisma/adapter-libsql": "^7.10.0",
     "@prisma/client": "^6.19.3",
     "@types/bcryptjs": "^2.4.6",
     "bcryptjs": "^3.0.3",
