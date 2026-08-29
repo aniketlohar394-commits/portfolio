@@ -1,0 +1,316 @@
+// HomeMate — Household Expense & Inventory Manager
+// Prisma Schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Authentication & Users ─────────────────────────────────────────
+
+model User {
+  id             String   @id @default(cuid())
+  name           String?
+  email          String   @unique
+  hashedPassword String?
+  image          String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  expenses          Expense[]
+  expenseCategories ExpenseCategory[]
+  recurringExpenses RecurringExpense[]
+  budgets           Budget[]
+  inventoryItems    InventoryItem[]
+  inventoryCategories InventoryCategory[]
+  inventoryTransactions InventoryTransaction[]
+  priceHistory      PriceHistory[]
+  shoppingListItems ShoppingListItem[]
+  milkVendors       MilkVendor[]
+  milkDeliveries    MilkDelivery[]
+  milkPriceChanges  MilkPriceChange[]
+  reminders         Reminder[]
+  settings          UserSettings?
+}
+
+model UserSettings {
+  id                   String  @id @default(cuid())
+  userId               String  @unique
+  currency             String  @default("INR")
+  currencySymbol       String  @default("₹")
+  language             String  @default("en")
+  theme                String  @default("light")
+  dateFormat           String  @default("DD/MM/YYYY")
+  monthlyBudget        Float   @default(20000)
+  milkReminderTime     String  @default("08:00")
+  notificationsEnabled Boolean @default(true)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ─── Expenses ───────────────────────────────────────────────────────
+
+model Expense {
+  id                String   @id @default(cuid())
+  amount            Float
+  name              String
+  categoryId        String?
+  date              DateTime @default(now())
+  paymentMethod     String   @default("Cash")
+  notes             String?
+  priority          String   @default("Normal")
+  isRecurring       Boolean  @default(false)
+  recurringExpenseId String?
+  milkDeliveryId    String?  @unique
+  userId            String
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category         ExpenseCategory?  @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  recurringExpense RecurringExpense? @relation(fields: [recurringExpenseId], references: [id], onDelete: SetNull)
+  milkDelivery     MilkDelivery?     @relation(fields: [milkDeliveryId], references: [id], onDelete: SetNull)
+
+  @@index([userId, date])
+  @@index([userId, categoryId])
+}
+
+model ExpenseCategory {
+  id        String  @id @default(cuid())
+  name      String
+  icon      String  @default("📦")
+  color     String  @default("#E67E22")
+  isDefault Boolean @default(false)
+  userId    String?
+
+  user     User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expenses Expense[]
+  recurringExpenses RecurringExpense[]
+  categoryBudgets   CategoryBudget[]
+
+  @@index([userId])
+}
+
+model RecurringExpense {
+  id           String    @id @default(cuid())
+  name         String
+  amount       Float
+  categoryId   String?
+  frequency    String
+  startDate    DateTime  @default(now())
+  endDate      DateTime?
+  defaultPrice Float?
+  icon         String    @default("🔄")
+  isActive     Boolean   @default(true)
+  userId       String
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  user     User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category ExpenseCategory?  @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  expenses Expense[]
+
+  @@index([userId])
+}
+
+// ─── Budget ─────────────────────────────────────────────────────────
+
+model Budget {
+  id          String @id @default(cuid())
+  totalBudget Float
+  month       Int
+  year        Int
+  userId      String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  categoryBudgets  CategoryBudget[]
+
+  @@unique([userId, month, year])
+}
+
+model CategoryBudget {
+  id         String @id @default(cuid())
+  budgetId   String
+  categoryId String
+  amount     Float
+
+  budget   Budget          @relation(fields: [budgetId], references: [id], onDelete: Cascade)
+  category ExpenseCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([budgetId, categoryId])
+}
+
+// ─── Inventory ──────────────────────────────────────────────────────
+
+model InventoryItem {
+  id               String    @id @default(cuid())
+  name             String
+  categoryId       String?
+  currentQuantity  Float     @default(0)
+  unit             String    @default("kg")
+  minimumQuantity  Float     @default(1)
+  purchasePrice    Float?
+  lastPurchaseDate DateTime?
+  supplier         String?
+  expiryDate       DateTime?
+  notes            String?
+  userId           String
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  user         User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category     InventoryCategory?     @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  transactions InventoryTransaction[]
+  priceHistory PriceHistory[]
+  shoppingListItems ShoppingListItem[]
+
+  @@index([userId])
+  @@index([userId, categoryId])
+}
+
+model InventoryCategory {
+  id        String  @id @default(cuid())
+  name      String
+  icon      String  @default("📦")
+  isDefault Boolean @default(false)
+  userId    String?
+
+  user  User?           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items InventoryItem[]
+
+  @@index([userId])
+}
+
+model InventoryTransaction {
+  id           String   @id @default(cuid())
+  itemId       String
+  type         String
+  quantity     Float
+  pricePerUnit Float?
+  notes        String?
+  date         DateTime @default(now())
+  userId       String
+  createdAt    DateTime @default(now())
+
+  item InventoryItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  user User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([itemId])
+  @@index([userId])
+}
+
+model PriceHistory {
+  id     String   @id @default(cuid())
+  itemId String
+  price  Float
+  date   DateTime @default(now())
+  userId String
+
+  item InventoryItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  user User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([itemId])
+}
+
+// ─── Shopping List ──────────────────────────────────────────────────
+
+model ShoppingListItem {
+  id              String   @id @default(cuid())
+  name            String
+  quantity        Float?
+  unit            String?
+  estimatedPrice  Float?
+  priority        String   @default("Normal")
+  isPurchased     Boolean  @default(false)
+  purchasedAt     DateTime?
+  actualPrice     Float?
+  inventoryItemId String?
+  userId          String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  inventoryItem InventoryItem? @relation(fields: [inventoryItemId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+}
+
+// ─── Milk Tracker ───────────────────────────────────────────────────
+
+model MilkVendor {
+  id              String  @id @default(cuid())
+  name            String
+  pricePerLitre   Float
+  defaultQuantity Float   @default(1)
+  frequency       String  @default("daily")
+  isActive        Boolean @default(true)
+  userId          String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user         User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deliveries   MilkDelivery[]
+  priceChanges MilkPriceChange[]
+
+  @@index([userId])
+}
+
+model MilkDelivery {
+  id            String   @id @default(cuid())
+  vendorId      String
+  date          DateTime
+  status        String   @default("delivered")
+  quantity      Float
+  pricePerLitre Float
+  totalAmount   Float
+  notes         String?
+  userId        String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  vendor  MilkVendor @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  user    User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expense Expense?
+
+  @@unique([vendorId, date])
+  @@index([userId, date])
+}
+
+model MilkPriceChange {
+  id            String   @id @default(cuid())
+  vendorId      String
+  newPrice      Float
+  effectiveDate DateTime
+  userId        String
+  createdAt     DateTime @default(now())
+
+  vendor MilkVendor @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  user   User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([vendorId])
+}
+
+// ─── Reminders / Notifications ──────────────────────────────────────
+
+model Reminder {
+  id          String    @id @default(cuid())
+  type        String
+  title       String
+  message     String?
+  referenceId String?
+  dueDate     DateTime?
+  isRead      Boolean   @default(false)
+  isDismissed Boolean   @default(false)
+  userId      String
+  createdAt   DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+}
