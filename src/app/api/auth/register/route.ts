@@ -108,10 +108,10 @@ export async function POST(request: Request) {
       { message: "Account created successfully", userId: user.id },
       { status: 201 }
     )
-  } catch (error) {
+  } catch (error: any) {
     console.error("Registration error:", error)
     return NextResponse.json(
-      { error: "Something went wrong. Please try again." },
+      { error: error?.message || "Something went wrong. Please try again." },
       { status: 500 }
     )
   }
