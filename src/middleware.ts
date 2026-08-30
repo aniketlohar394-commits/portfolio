@@ -1,28 +1,12 @@
-import { auth } from "@/lib/auth"
-import { NextResponse } from "next/server"
+import NextAuth from "next-auth";
+import { authConfig } from "@/lib/auth.config";
 
-export default auth((req) => {
-  const isLoggedIn = !!req.auth
-  const isAuthPage = req.nextUrl.pathname.startsWith("/login") || req.nextUrl.pathname.startsWith("/register")
+export const { auth: middleware } = NextAuth(authConfig);
 
-  if (isAuthPage) {
-    if (isLoggedIn) {
-      return NextResponse.redirect(new URL("/dashboard", req.nextUrl))
-    }
-    return NextResponse.next()
-  }
-
-  if (!isLoggedIn) {
-    const loginUrl = new URL("/login", req.nextUrl)
-    loginUrl.searchParams.set("callbackUrl", req.nextUrl.pathname)
-    return NextResponse.redirect(loginUrl)
-  }
-
-  return NextResponse.next()
-})
+export default middleware;
 
 export const config = {
   matcher: [
-    "/((?!api|_next/static|_next/image|favicon.ico|icons).*)",
+    "/((?!api|_next/static|_next/image|favicon.ico|icons|HomeMate-v1\\.0\\.apk).*)",
   ],
-}
+};
