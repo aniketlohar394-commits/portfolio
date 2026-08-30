@@ -5,13 +5,11 @@ const config: CapacitorConfig = {
   appName: 'HomeMate',
   webDir: 'public',
   server: {
-    url: 'http://10.56.102.15:3000',
+    url: 'https://portfolio1-alpha-pink-65.vercel.app',
     cleartext: true,
     allowNavigation: [
-      '10.56.102.15:3000',
-      '10.0.2.2:3000',
-      'localhost:3000',
-      '*.homemate.app'
+      'portfolio1-alpha-pink-65.vercel.app',
+      '*.vercel.app'
     ]
   }
 };

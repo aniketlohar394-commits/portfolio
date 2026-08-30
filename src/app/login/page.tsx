@@ -18,21 +18,23 @@ export default function LoginPage() {
     setLoading(true);
     setError('');
 
+    const cleanEmail = email.trim().toLowerCase();
+
     try {
       const result = await signIn('credentials', {
         redirect: false,
-        email,
+        email: cleanEmail,
         password,
       });
 
       if (result?.error) {
         setError('Invalid email or password');
       } else {
-        router.push('/dashboard');
-        router.refresh();
+        window.location.href = '/dashboard';
       }
-    } catch (err) {
-      setError('An error occurred. Please try again.');
+    } catch (err: any) {
+      console.error('Sign in error:', err);
+      setError(err?.message || 'An error occurred during sign in.');
     } finally {
       setLoading(false);
     }
